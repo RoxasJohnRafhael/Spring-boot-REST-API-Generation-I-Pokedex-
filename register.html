@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex - Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap');
+        body {
+            font-family: 'Ubuntu', sans-serif;
+            background: radial-gradient(circle at 12% 12%, rgba(255, 77, 45, 0.18) 0%, rgba(0, 0, 0, 0) 55%),
+                        radial-gradient(circle at 88% 30%, rgba(104, 144, 240, 0.16) 0%, rgba(0, 0, 0, 0) 55%),
+                        linear-gradient(135deg, #0b0b0f 0%, #1a1a1a 40%, #0b0b0f 100%);
+            overflow-x: hidden;
+        }
+        .pokedex-glow {
+            box-shadow: 0 30px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.08) inset;
+        }
+        .pokeball-watermark {
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.14) 0 10px, rgba(255,255,255,0.0) 11px 100%),
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0 45px, rgba(255,255,255,0) 46px 100%),
+                linear-gradient(180deg, rgba(0,0,0,0) 0 48%, rgba(255,255,255,0.12) 49% 51%, rgba(0,0,0,0) 52% 100%),
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 0 110px, rgba(255,255,255,0) 111px 100%);
+        }
+        .sprite-float {
+            animation: floaty 4.8s ease-in-out infinite;
+            filter: drop-shadow(0 14px 30px rgba(0,0,0,0.5));
+        }
+        @keyframes floaty {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .input-dark {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+        .input-dark::placeholder {
+            color: rgba(255, 255, 255, 0.35);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl">
+        <div class="grid grid-cols-1 md:grid-cols-2 rounded-3xl overflow-hidden pokedex-glow border border-white/10 bg-black/30 backdrop-blur-xl">
+            <div class="relative p-10 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white">
+                <div class="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full opacity-25 pokeball-watermark"></div>
+                <div class="absolute -bottom-28 -right-24 w-[480px] h-[480px] rounded-full opacity-15 pokeball-watermark"></div>
+
+                <div class="relative">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
+                            <i class="fas fa-user-plus text-white text-xl"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] uppercase font-black tracking-[6px] opacity-80">Trainer ID</span>
+                            <span class="text-3xl font-black uppercase tracking-widest">Create Account</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 text-white/85 text-sm leading-relaxed">
+                        Register once to unlock the full Pokédex experience: search, stats, and your saved team.
+                    </div>
+
+                    <div class="mt-10 grid grid-cols-3 gap-4 items-end">
+                        <div class="bg-white/10 border border-white/15 rounded-2xl p-4 text-center">
+                            <img class="mx-auto w-20 h-20 object-contain sprite-float" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png" alt="Bulbasaur">
+                            <div class="mt-3 text-[10px] uppercase font-black tracking-[4px] opacity-90">Bulbasaur</div>
+                        </div>
+                        <div class="bg-white/10 border border-white/15 rounded-2xl p-4 text-center">
+                            <img class="mx-auto w-20 h-20 object-contain sprite-float" style="animation-delay: .25s" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png" alt="Charmander">
+                            <div class="mt-3 text-[10px] uppercase font-black tracking-[4px] opacity-90">Charmander</div>
+                        </div>
+                        <div class="bg-white/10 border border-white/15 rounded-2xl p-4 text-center">
+                            <img class="mx-auto w-20 h-20 object-contain sprite-float" style="animation-delay: .5s" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png" alt="Squirtle">
+                            <div class="mt-3 text-[10px] uppercase font-black tracking-[4px] opacity-90">Squirtle</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex flex-wrap gap-2">
+                        <span class="px-3 py-1 rounded-full bg-black/20 border border-white/15 text-[10px] font-black uppercase tracking-[3px]">Quick Setup</span>
+                        <span class="px-3 py-1 rounded-full bg-black/20 border border-white/15 text-[10px] font-black uppercase tracking-[3px]">Secure</span>
+                        <span class="px-3 py-1 rounded-full bg-black/20 border border-white/15 text-[10px] font-black uppercase tracking-[3px]">Any Region</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-10 bg-[#0f0f13]">
+                <div class="flex items-center justify-between">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] uppercase font-black tracking-[6px] text-white/40">Registration</span>
+                        <h1 class="text-2xl font-black uppercase tracking-widest text-white">New Trainer</h1>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/70">
+                        <i class="fas fa-id-badge"></i>
+                    </div>
+                </div>
+
+                <div th:if="${error}" class="mt-6 bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 rounded-2xl" role="alert">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-triangle-exclamation mt-0.5"></i>
+                        <p th:text="${error}" class="text-sm font-medium"></p>
+                    </div>
+                </div>
+
+                <form id="registerForm" th:action="@{/register}" method="post" class="mt-8 space-y-5">
+                    <div>
+                        <label for="username" class="block text-[10px] font-black uppercase tracking-[4px] text-white/45 ml-2">Trainer Name</label>
+                        <div class="mt-2 relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <input type="text" name="username" id="username" required
+                                   class="input-dark block w-full pl-11 pr-4 py-3 rounded-2xl outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold"
+                                   placeholder="Choose a username">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="email" class="block text-[10px] font-black uppercase tracking-[4px] text-white/45 ml-2">Email Address</label>
+                        <div class="mt-2 relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <input type="email" name="email" id="email" required
+                                   class="input-dark block w-full pl-11 pr-4 py-3 rounded-2xl outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold"
+                                   placeholder="trainer@example.com">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="password" class="block text-[10px] font-black uppercase tracking-[4px] text-white/45 ml-2">Password</label>
+                            <div class="mt-2 relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <input type="password" name="password" id="password" required
+                                       class="input-dark block w-full pl-11 pr-4 py-3 rounded-2xl outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold"
+                                       placeholder="••••••••">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="confirmPassword" class="block text-[10px] font-black uppercase tracking-[4px] text-white/45 ml-2">Confirm Password</label>
+                            <div class="mt-2 relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40">
+                                    <i class="fas fa-shield-halved"></i>
+                                </div>
+                                <input type="password" name="confirmPassword" id="confirmPassword" required
+                                       class="input-dark block w-full pl-11 pr-4 py-3 rounded-2xl outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold"
+                                       placeholder="••••••••">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="pwMismatch" class="hidden bg-yellow-500/10 border border-yellow-500/30 text-yellow-200 px-4 py-3 rounded-2xl">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-circle-exclamation mt-0.5"></i>
+                            <p class="text-sm font-medium">Passwords do not match.</p>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="registerBtn"
+                            class="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase tracking-[4px] shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.01] active:scale-[0.98]">
+                        Create Trainer ID
+                    </button>
+                </form>
+
+                <div class="mt-8 flex items-center justify-between">
+                    <p class="text-sm text-white/50">
+                        Already registered?
+                        <a th:href="@{/login}" class="font-black text-blue-300 hover:text-blue-200 uppercase tracking-widest text-[11px]">Log In</a>
+                    </p>
+                    <a th:href="@{/}" class="text-white/35 hover:text-white/70 text-xs font-black uppercase tracking-[4px]">Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+        const mismatch = document.getElementById('pwMismatch');
+        const btn = document.getElementById('registerBtn');
+        const form = document.getElementById('registerForm');
+
+        function syncPasswordState() {
+            const p = password.value || '';
+            const c = confirmPassword.value || '';
+            const ok = p.length > 0 && c.length > 0 && p === c;
+            mismatch.classList.toggle('hidden', ok || c.length === 0);
+            btn.disabled = !ok;
+            btn.classList.toggle('opacity-60', !ok);
+            btn.classList.toggle('cursor-not-allowed', !ok);
+        }
+
+        password.addEventListener('input', syncPasswordState);
+        confirmPassword.addEventListener('input', syncPasswordState);
+        form.addEventListener('submit', (e) => {
+            syncPasswordState();
+            if (btn.disabled) e.preventDefault();
+        });
+
+        syncPasswordState();
+    </script>
+</body>
+</html>

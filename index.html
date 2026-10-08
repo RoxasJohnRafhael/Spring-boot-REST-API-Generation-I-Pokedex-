@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex - Galar Style</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap');
+        
+        :root {
+            --theme-color: #ff4d2d;
+            --theme-color-light: #ff7a5c;
+            --theme-color-rgba: rgba(255, 77, 45, 0.2);
+        }
+
+        body {
+            font-family: 'Ubuntu', sans-serif;
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            transition: all 0.5s ease;
+        }
+
+        /* Sword/Shield Background Style */
+        .pokedex-container {
+            display: flex;
+            height: 100vh;
+            background: linear-gradient(115deg, #ffffff 45%, var(--theme-color) 45.1%, var(--theme-color) 100%);
+            position: relative;
+            transition: background 0.5s ease;
+        }
+
+        /* Left Side: Featured Pokemon */
+        .featured-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            position: relative;
+            background: #1a1a1a;
+        }
+
+        .header-bar {
+            display: none;
+        }
+
+        .mini-sprite {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-right: 20px;
+        }
+
+        .header-num-tag {
+            background: var(--theme-color-light);
+            padding: 2px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 20px;
+            font-size: 1.1rem;
+        }
+
+        .header-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .display-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            background: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Pokéball Watermark */
+        .display-area::before {
+            content: "\f10c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40rem;
+            color: rgba(255, 255, 255, 0.03);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .main-sprite-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+
+        #mainSprite {
+            width: 650px; /* Increased by ~30% from 500px */
+            height: 650px;
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            filter: drop-shadow(0 30px 60px rgba(0,0,0,0.4));
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            image-rendering: pixelated;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        /* Sprite Transition */
+        .sprite-fade {
+            animation: spriteFade 0.4s ease-out;
+        }
+        @keyframes spriteFade {
+            0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        #mainSprite:hover {
+            transform: scale(1.05);
+        }
+
+        /* Sprite Attack Animation */
+        .sprite-attack {
+            animation: spriteAttack 0.5s ease;
+        }
+        @keyframes spriteAttack {
+            0% { transform: scale(1) translateX(0); }
+            20% { transform: scale(1.1) translateX(-20px); }
+            40% { transform: scale(1.2) translateX(60px) rotate(5deg); }
+            100% { transform: scale(1) translateX(0); }
+        }
+
+        /* Dark Flavor Text Box - Bigger & Bottom Left */
+        .featured-desc-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(15px);
+            padding: 20px 25px;
+            border-radius: 15px;
+            border-left: 4px solid var(--theme-color);
+            z-index: 10;
+            width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: left;
+        }
+        .featured-desc {
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-weight: 400;
+            line-height: 1.5;
+            letter-spacing: 0.3px;
+        }
+
+        /* Grouped Bottom Info - Adjusted for new Desc position */
+        .bottom-info-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            z-index: 10;
+        }
+        .bottom-name-group {
+            background: rgba(255, 77, 45, 0.1);
+            padding: 8px 25px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 77, 45, 0.2);
+        }
+        .bottom-num {
+            color: var(--theme-color);
+            font-weight: 900;
+            font-size: 1rem;
+        }
+        .bottom-name {
+            font-size: 1.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffffff;
+        }
+        .bottom-types {
+            display: flex;
+            gap: 8px;
+        }
+        .type-badge-large {
+            padding: 5px 20px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Sprite Toggles */
+        .sprite-toggles {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            z-index: 20;
+        }
+        .toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #ccc;
+        }
+        .toggle-btn:hover { transform: scale(1.1); color: var(--theme-color); background: rgba(255, 255, 255, 0.2); }
+        .toggle-btn.active { background: var(--theme-color); color: white; border-color: white; }
+
+        /* User Menu Styling */
+        .user-menu {
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 15px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .top-right-actions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 100;
+        }
+        .user-name {
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .user-action-btn {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .user-action-btn:hover {
+            color: var(--theme-color);
+        }
+
+        /* Team Builder Styling */
+        .team-builder-container {
+            position: absolute;
+            top: 80px;
+            right: -100px; /* Hidden by default */
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 30px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .team-builder-container.show {
+            right: 20px;
+            opacity: 1;
+            pointer-events: all;
+        }
+        .team-slot {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: visible;
+        }
+        .team-slot::after {
+            content: "\f10c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.1);
+            transition: opacity 0.3s;
+        }
+        .team-slot.filled::after {
+            display: none;
+        }
+        .team-slot.filled {
+            border: 3px solid var(--slot-color, var(--theme-color));
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px var(--slot-rgba, var(--theme-color-rgba));
+        }
+        .team-slot:hover {
+            transform: scale(1.1) translateX(-5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .team-slot img {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            z-index: 2;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        .team-slot:hover .remove-team-btn {
+            opacity: 1;
+        }
+        .remove-team-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 20px;
+            height: 20px;
+            background: #ff4d2d;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .remove-team-btn:hover {
+            background: #ff0000;
+            transform: scale(1.2);
+        }
+        .team-label {
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+        .view-team-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 0.55rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 5px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 5px;
+        }
+        .view-team-btn:hover {
+            background: var(--theme-color);
+            border-color: #fff;
+        }
+
+        /* Toggle Team Button Badge */
+        .team-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ffeb3b;
+            color: #1a1a1a;
+            font-size: 0.65rem;
+            font-weight: 900;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            border: 2px solid #1a1a1a;
+            z-index: 5;
+        }
+        .team-badge.hidden {
+            display: none;
+        }
+
+        /* Full Team Panel */
+        .full-team-panel {
+            background: #1a1a1a;
+            border-radius: 30px;
+            padding: 40px;
+            width: 1100px;
+            max-width: 95vw;
+            border: 4px solid var(--theme-color);
+            box-shadow: 0 0 100px rgba(0,0,0,0.9);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .full-team-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            min-height: 500px;
+        }
+        .full-team-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .full-team-desc-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.4s;
+        }
+        .full-team-desc-panel.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .full-team-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        .full-team-card.selected {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--theme-color);
+            transform: scale(1.05);
+        }
+        .full-team-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+        }
+        .full-team-card.empty {
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            opacity: 0.5;
+            cursor: default;
+        }
+        .full-team-card.empty:hover {
+            transform: none;
+        }
+        .full-team-card img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+        }
+        .full-team-name {
+            font-size: 1.1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: white;
+        }
+        .full-team-types {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* Add to Team Button */
+        .add-to-team-btn {
+            background: var(--theme-color);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+        .add-to-team-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Loading Spinner */
+        #loadingSpinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            color: var(--theme-color);
+            font-size: 3rem;
+            display: none;
+        }
+
+        .item-sprite, .modal-sprite {
+            image-rendering: pixelated;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        .info-table {
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .info-header {
+            background: #d0d0d0;
+            padding: 8px 20px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            border-bottom: 1px solid #ccc;
+            background: #f5f5f5;
+        }
+
+        .info-label {
+            padding: 12px 20px;
+            background: #e8e8e8;
+            font-weight: bold;
+            color: #555;
+            text-align: right;
+            border-right: 1px solid #ccc;
+        }
+
+        .info-value {
+            padding: 12px 20px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .type-badge {
+            padding: 2px 12px;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2);
+            display: inline-block;
+            margin: 2px;
+        }
+
+        .list-pane {
+            width: 45%;
+            background: #2a2a2a;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .list-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%);
+            padding: 15px 30px;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 900;
+            z-index: 110;
+            pointer-events: none;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            border-top: 3px solid var(--theme-color);
+        }
+
+        .pokemon-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 100px 40px;
+        }
+
+        /* Custom Scrollbar */
+        .pokemon-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .pokemon-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+        }
+
+        /* List Refinements */
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            background: rgba(255,255,255,0.05);
+            color: #ccc;
+            border-radius: 4px;
+            border-left: 4px solid transparent;
+        }
+
+        .list-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .list-item .ml-auto {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .list-item:hover .ml-auto {
+            opacity: 1;
+        }
+
+        .list-item.selected {
+            background: var(--theme-color);
+            color: white;
+            transform: scale(1.02);
+            z-index: 10;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .list-item.selected::before {
+            content: '>';
+            position: absolute;
+            left: -20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--theme-color);
+        }
+
+        .list-item .item-sprite {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+        }
+
+        .list-item .item-number {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-right: 30px;
+            opacity: 0.8;
+        }
+
+        .list-item .item-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Stats Modal */
+        .stat-modal-content {
+            background: #2a2a2a;
+            color: white;
+            border-radius: 24px;
+            padding: 40px;
+            width: 900px;
+            max-width: 95vw;
+            border: 6px solid var(--theme-color);
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 40px;
+            position: relative;
+            transition: border-color 0.5s ease;
+        }
+
+        .stat-modal-left {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-modal-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .modal-sprite {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        /* Filter Row Layout */
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .filter-row-label {
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.5;
+            min-width: 45px;
+            text-align: right;
+        }
+        .filter-row .gen-icon-grid, 
+        .filter-row .type-icon-grid {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .gen-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 900;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .gen-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1;
+            transition: background 0.3s;
+        }
+        .gen-btn span {
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .gen-btn:hover {
+            transform: scale(1.1);
+            border-color: var(--theme-color);
+        }
+        .gen-btn:hover::before {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .gen-btn.active {
+            background-color: var(--theme-color);
+            border-color: #fff;
+            box-shadow: 0 0 15px var(--theme-color-rgba);
+        }
+        .gen-btn.active::before {
+            background: transparent;
+        }
+
+        /* Generation & Type Icon Grids */
+        .gen-icon-grid, .type-icon-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 6px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+        }
+        .type-icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            opacity: 0.6;
+        }
+        .type-icon-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        .type-icon-btn.active {
+            opacity: 1;
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        .type-icon-btn i {
+            font-size: 0.8rem;
+            color: white;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+        }
+
+        /* Radar Chart Container - Removed */
+        .stat-radar-container {
+            display: none;
+        }
+
+        /* Normal Stat Bars */
+        .stat-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .stat-bar-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 40px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        .stat-bar-bg {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Stat Bar Colors */
+        #barHp { background: #4caf50; }
+        #barAtk { background: #f44336; }
+        #barDef { background: #2196f3; }
+        #barSpAtk { background: #9c27b0; }
+        #barSpDef { background: #00bcd4; }
+        #barSpd { background: #ffeb3b; }
+
+        .stat-val {
+            font-size: 0.8rem;
+            font-weight: 900;
+            color: white;
+            text-align: right;
+        }
+
+        /* Generation Tag in Modal */
+        .gen-tag {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        /* Search Area Redesign */
+        .search-area {
+            padding: 30px;
+            background: var(--theme-color);
+            border-bottom: 4px solid #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: background 0.5s ease;
+        }
+
+        .search-box {
+            background: #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 5px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .type-filter-select {
+            background: #fff;
+            border: 2px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 10px;
+            font-weight: 700;
+            color: var(--theme-color);
+            cursor: pointer;
+            outline: none;
+        }
+
+        .search-input {
+            border: none;
+            padding: 10px;
+            width: 100%;
+            outline: none;
+            color: #1a1a1a;
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: transparent;
+        }
+
+        .search-input::placeholder {
+            color: var(--theme-color);
+            opacity: 0.5;
+            font-style: normal;
+        }
+
+        .search-icon {
+            color: var(--theme-color);
+            font-size: 1.5rem;
+            margin-right: 15px;
+        }
+
+        .filter-label {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+        }
+
+        /* Evolution Sprites */
+        .evo-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 10px;
+            min-width: 80px;
+            transition: transform 0.2s;
+        }
+        .evo-stage:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .evo-sprite {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+        .evo-name {
+            font-size: 0.65rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ccc;
+        }
+        .evo-arrow {
+            color: var(--theme-color);
+            font-size: 0.8rem;
+            opacity: 0.5;
+        }
+
+        .bg-theme { background-color: var(--theme-color); }
+        .text-theme { color: var(--theme-color); }
+        .border-theme { border-color: var(--theme-color); }
+
+        /* Add Button Simplified */
+        .add-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .add-btn:hover {
+            background: var(--theme-color);
+            border-color: var(--theme-color);
+            transform: rotate(90deg);
+        }
+
+        /* Custom Scrollbar for Form */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="pokedex-container">
+        <!-- Left Pane: Featured -->
+        <div class="featured-pane">
+            <div class="list-header">National Pokedex</div>
+            
+            <div class="top-right-actions">
+                <div class="sprite-toggles">
+                    <div id="shinyToggle" class="toggle-btn" onclick="toggleShiny()" title="Shiny View">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div id="backToggle" class="toggle-btn" onclick="toggleBack()" title="Back View">
+                        <i class="fas fa-sync"></i>
+                    </div>
+                    <button class="toggle-btn" onclick="openFullTeam()" title="View Full Team">
+                        <i class="fas fa-users"></i>
+                    </button>
+                    <button id="bgmToggle" onclick="toggleBGM()" class="toggle-btn" title="Toggle BGM">
+                        <i id="bgmIcon" class="fas fa-volume-mute"></i>
+                    </button>
+                    <!-- Admin Only Add Button -->
+                    <button sec:authorize="hasRole('ADMIN')" onclick="openAddModal()" class="toggle-btn" title="Register New Pokémon">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <!-- User Menu Integration -->
+                <div class="user-menu">
+                    <i class="fas fa-user-circle text-white"></i>
+                    <span class="user-name" sec:authentication="name">Trainer</span>
+                    <div class="flex gap-3 ml-2 border-l border-white/20 pl-3">
+                        <a th:href="@{/change-password}" class="user-action-btn" title="Change Password">
+                            <i class="fas fa-key"></i>
+                        </a>
+                        <form th:action="@{/logout}" method="post" class="inline">
+                            <button type="submit" class="user-action-btn" title="Logout">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="display-area">
+                <div id="loadingSpinner"><i class="fas fa-spinner fa-spin"></i></div>
+
+                <!-- Team Builder Slots -->
+                <div class="team-builder-container">
+                    <div class="team-label">Team</div>
+                    <div class="team-slot" id="slot-0" onclick="selectFromTeam(0)"></div>
+                    <div class="team-slot" id="slot-1" onclick="selectFromTeam(1)"></div>
+                    <div class="team-slot" id="slot-2" onclick="selectFromTeam(2)"></div>
+                    <div class="team-slot" id="slot-3" onclick="selectFromTeam(3)"></div>
+                    <div class="team-slot" id="slot-4" onclick="selectFromTeam(4)"></div>
+                    <div class="team-slot" id="slot-5" onclick="selectFromTeam(5)"></div>
+                    <button class="view-team-btn" onclick="openFullTeam()">
+                        <i class="fas fa-expand-alt mr-1"></i> View Full
+                    </button>
+                </div>
+
+                <div class="main-sprite-container">
+                    <img id="mainSprite" src="" alt="" class="sprite-fade" ondblclick="triggerAttack()">
+                    <div id="addToTeamBtn" class="add-to-team-btn" onclick="addToTeam()">Add to Team</div>
+                </div>
+
+                <div class="featured-desc-container">
+                    <div id="featuredDesc" class="featured-desc">
+                        Select a Pokémon to view its details.
+                    </div>
+                </div>
+
+                <div class="bottom-info-container">
+                    <div class="bottom-name-group">
+                        <span class="bottom-num" id="bottomNum">#---</span>
+                        <span class="bottom-name" id="bottomName">---</span>
+                    </div>
+                    <div id="bottomTypes" class="bottom-types">
+                        <!-- Type badges here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Pane: List -->
+        <div class="list-pane">
+            <div class="search-area">
+                <span class="filter-label">Filter & Search</span>
+                <div class="flex flex-col gap-3">
+                    <div class="search-box mb-2">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" onkeyup="filterList()" placeholder="Name or #..." class="search-input">
+                    </div>
+                    
+                    <div class="filter-row">
+                        <span class="filter-row-label">Gen</span>
+                        <div class="gen-icon-grid" id="genIconGrid">
+                            <!-- Gen buttons will be injected by JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <span class="filter-row-label">Type</span>
+                        <div class="type-icon-grid" id="typeIconGrid">
+                            <!-- Icons will be injected by JS -->
+                        </div>
+                    </div>
+
+                    <button onclick="clearFilters()" class="w-full mt-2 py-1 text-[10px] uppercase font-black text-white/30 hover:text-white/100 transition-colors border border-white/10 rounded-full hover:bg-white/5">
+                        Clear All Filters
+                    </button>
+                </div>
+            </div>
+            <div class="px-10 py-4 text-white/40 font-black text-[10px] uppercase tracking-[4px]">All Pokémon</div>
+            <div class="pokemon-list" id="pokemonList">
+                <!-- List items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Security Info for JS -->
+    <div id="securityInfo" style="display: none;" 
+         th:data-is-admin="${#authorization.expression('hasRole(''ADMIN'')')}"></div>
+
+    <audio id="bgmAudio" loop preload="auto">
+        <source src="/audio/littleroot.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Details & Stats Modal -->
+    <div id="statsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[2500] flex items-center justify-center p-4" onclick="toggleModal('statsModal')">
+        <div class="stat-modal-content" onclick="event.stopPropagation()">
+            <!-- Left Side -->
+            <div class="stat-modal-left">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-xl font-bold uppercase tracking-widest text-red-500" id="modalPokemonName">---</h2>
+                        <span id="modalGen" class="gen-tag">Gen ---</span>
+                    </div>
+                    <span class="text-gray-400 font-bold" id="modalPokemonNum">#---</span>
+                </div>
+                <img id="modalSprite" class="modal-sprite" src="" alt="">
+                
+                <div class="stat-bar-container">
+                    <div class="stat-bar-row">
+                        <span class="stat-label">HP</span>
+                        <div class="stat-bar-bg"><div id="barHp" class="stat-bar-fill"></div></div>
+                        <span id="valHp" class="stat-val">0</span>
+                    </div>
+                    <div class="stat-bar-row">
+                        <span class="stat-label">ATTACK</span>
+                        <div class="stat-bar-bg"><div id="barAtk" class="stat-bar-fill"></div></div>
+                        <span id="valAtk" class="stat-val">0</span>
+                    </div>
+                    <div class="stat-bar-row">
+                        <span class="stat-label">DEFENSE</span>
+                        <div class="stat-bar-bg"><div id="barDef" class="stat-bar-fill"></div></div>
+                        <span id="valDef" class="stat-val">0</span>
+                    </div>
+                    <div class="stat-bar-row">
+                        <span class="stat-label">SP. ATK</span>
+                        <div class="stat-bar-bg"><div id="barSpAtk" class="stat-bar-fill"></div></div>
+                        <span id="valSpAtk" class="stat-val">0</span>
+                    </div>
+                    <div class="stat-bar-row">
+                        <span class="stat-label">SP. DEF</span>
+                        <div class="stat-bar-bg"><div id="barSpDef" class="stat-bar-fill"></div></div>
+                        <span id="valSpDef" class="stat-val">0</span>
+                    </div>
+                    <div class="stat-bar-row">
+                        <span class="stat-label">SPEED</span>
+                        <div class="stat-bar-bg"><div id="barSpd" class="stat-bar-fill"></div></div>
+                        <span id="valSpd" class="stat-val">0</span>
+                    </div>
+                    <div class="stat-bar-row mt-2 pt-2 border-t border-white/10">
+                        <span class="stat-label text-red-500">TOTAL</span>
+                        <div class="stat-bar-bg opacity-0"></div>
+                        <span id="valTotal" class="stat-val text-red-500 font-black">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side -->
+            <div class="stat-modal-right">
+                <div class="info-table text-black">
+                    <div class="info-header" id="infoCategory">--- Pokémon</div>
+                    <div class="info-row">
+                        <div class="info-label">Type</div>
+                        <div class="info-value" id="infoType">---</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Weak To</div>
+                        <div class="info-value" id="infoWeakness">---</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Strong Against</div>
+                        <div class="info-value" id="infoStrength">---</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Height / Weight</div>
+                        <div class="info-value" id="infoDimensions">---</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Abilities</div>
+                        <div class="info-value" id="infoAbilities">---</div>
+                    </div>
+                </div>
+                
+                <div class="bg-white/10 p-4 rounded-lg border-l-4 border-red-500 text-sm italic leading-relaxed" id="modalDesc">
+                    ---
+                </div>
+
+                <div class="evolution-container bg-black/20 p-3 rounded-lg border border-white/5 mb-4">
+                    <div class="text-[10px] uppercase font-black text-gray-400 mb-2 tracking-widest">Evolution Chain</div>
+                    <div id="infoEvolution" class="text-xs font-bold text-white flex items-center gap-2">---</div>
+                </div>
+
+                <button onclick="toggleModal('statsModal')" class="mt-auto bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold transition uppercase tracking-widest text-xs">
+                    Close Entry
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Modal (Add & Update) -->
+    <div id="formModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-xl z-[4000] flex items-center justify-center p-4">
+        <div class="bg-[#1a1a1a] rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden border-2 border-red-600 flex flex-col md:flex-row max-h-[90vh]">
+            <!-- Left Side: Preview & Title -->
+            <div class="md:w-1/3 bg-gradient-to-b from-red-600 to-red-800 p-8 flex flex-col items-center justify-center text-white relative">
+                <div class="absolute top-4 left-4 opacity-20 text-6xl font-black">REG</div>
+                <h2 id="modalTitle" class="text-3xl font-black uppercase tracking-widest mb-8 text-center">New Registry</h2>
+                
+                <div class="relative group">
+                    <div class="absolute -inset-4 bg-white/20 rounded-full blur-xl group-hover:bg-white/30 transition-all"></div>
+                    <img id="formPreviewSprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png" 
+                         class="w-48 h-48 object-contain relative z-10 drop-shadow-2xl transition-transform group-hover:scale-110" alt="Preview">
+                </div>
+                
+                <div class="mt-8 text-center space-y-2">
+                    <div class="text-xs uppercase font-bold tracking-[4px] opacity-70">Pokedex Number</div>
+                    <div id="formPreviewNumber" class="text-4xl font-black">#000</div>
+                </div>
+
+                <button onclick="toggleModal('formModal')" class="mt-auto text-white/50 hover:text-white transition-colors uppercase text-[10px] font-bold tracking-widest">
+                    Cancel Operation
+                </button>
+            </div>
+
+            <!-- Right Side: Form -->
+            <form id="pokemonForm" class="flex-1 p-8 overflow-y-auto space-y-6 custom-scrollbar bg-[#1a1a1a]">
+                <input type="hidden" id="pokemonId">
+                
+                <!-- Section 1: Identity -->
+                <div>
+                    <div class="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+                        <i class="fas fa-id-card text-red-500"></i>
+                        <span class="text-xs font-black uppercase tracking-widest text-white/50">Identification</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Pokedex #</label>
+                            <input type="number" id="formNumber" name="number" required 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all font-bold"
+                                   oninput="updateFormPreview()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Pokemon Name</label>
+                            <input type="text" id="formName" name="name" required 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all font-bold uppercase">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Attributes -->
+                <div>
+                    <div class="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+                        <i class="fas fa-tags text-red-500"></i>
+                        <span class="text-xs font-black uppercase tracking-widest text-white/50">Attributes</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Primary Type(s)</label>
+                            <input type="text" id="formType" name="type" required placeholder="e.g. Fire/Flying"
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Category</label>
+                            <input type="text" id="formCategory" name="category" placeholder="e.g. Flame Pokémon"
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Combat Data -->
+                <div>
+                    <div class="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+                        <i class="fas fa-swords text-red-500"></i>
+                        <span class="text-xs font-black uppercase tracking-widest text-white/50">Combat Statistics</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">HP</label>
+                            <input type="number" id="formHp" name="hp" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">ATK</label>
+                            <input type="number" id="formAttack" name="attack" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">DEF</label>
+                            <input type="number" id="formDefense" name="defense" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">SP.ATK</label>
+                            <input type="number" id="formSpecialAttack" name="specialAttack" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">SP.DEF</label>
+                            <input type="number" id="formSpecialDefense" name="specialDefense" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">SPD</label>
+                            <input type="number" id="formSpeed" name="speed" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Level</label>
+                            <input type="number" id="formLevel" name="level" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Weak To</label>
+                            <input type="text" id="formWeakness" name="weakness" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Strong Against</label>
+                            <input type="text" id="formStrength" name="strength" 
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none transition-all font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Physical & Description -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Height / Weight</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="formHeight" name="height" placeholder="3'07''"
+                                       class="w-1/2 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none font-bold">
+                                <input type="text" id="formWeight" name="weight" placeholder="18.7 lbs"
+                                       class="w-1/2 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none font-bold">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Abilities</label>
+                            <input type="text" id="formAbilities" name="abilities" placeholder="e.g. Blaze, Solar Power"
+                                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none font-bold">
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Description</label>
+                        <textarea id="formDescription" name="description" rows="4" 
+                                  class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:border-red-500 outline-none font-medium text-sm custom-scrollbar"
+                                  placeholder="Enter Pokedex entry text..."></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" 
+                        class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl font-black uppercase tracking-[4px] shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    Authorize Entry
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Full Team Modal -->
+    <div id="fullTeamModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-xl z-[3000] flex items-center justify-center p-4" onclick="toggleModal('fullTeamModal')">
+        <div class="full-team-panel" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-3xl font-black uppercase tracking-[10px] text-white">Your Team</h2>
+                <button onclick="toggleModal('fullTeamModal')" class="text-white/50 hover:text-white text-3xl transition-colors">&times;</button>
+            </div>
+            
+            <div class="full-team-content">
+                <div id="fullTeamGrid" class="full-team-grid"></div>
+                <div id="fullTeamDescPanel" class="full-team-desc-panel">
+                    <div id="teamDescTop" class="flex flex-col items-center gap-4 text-center">
+                        <img id="teamDescImg" src="" class="w-48 h-48 object-contain drop-shadow-2xl" alt="">
+                        <div class="flex flex-col gap-1">
+                            <span id="teamDescNum" class="text-theme font-black text-sm tracking-widest opacity-50">#---</span>
+                            <h3 id="teamDescName" class="text-2xl font-black uppercase tracking-widest text-white">Select a Member</h3>
+                        </div>
+                        <div id="teamDescTypes" class="flex gap-2"></div>
+                    </div>
+                    <div class="mt-4 p-4 bg-white/5 rounded-xl border-l-4 border-theme text-sm italic text-gray-300 leading-relaxed" id="teamDescText">
+                        Tap a team member to see their details.
+                    </div>
+                    <div class="mt-auto grid grid-cols-2 gap-3">
+                        <button id="teamDescViewBtn" class="bg-theme text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest opacity-50 cursor-not-allowed transition-all">
+                            View Full Entry
+                        </button>
+                        <button id="teamDescRemoveBtn" class="bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white py-3 rounded-xl font-black uppercase text-[10px] tracking-widest opacity-50 cursor-not-allowed transition-all">
+                            Remove Member
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-center">
+                <button onclick="toggleModal('fullTeamModal')" class="bg-white/10 hover:bg-white/20 text-white px-10 py-3 rounded-full font-bold uppercase tracking-widest transition-all border border-white/10">
+                    Close Panel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const API_URL = /*[[@{/api/pokemon}]]*/ 'http://localhost:8081/api/pokemon';
+        const isAdmin = document.getElementById('securityInfo').dataset.isAdmin === 'true';
+        
+        let allPokemon = [];
+        let visibleList = [];
+        let selectedId = null;
+        let isShiny = false;
+        let isBack = false;
+        let selectedType = null;
+        let selectedGen = null;
+        let pokemonTeam = JSON.parse(localStorage.getItem('pokemonTeam')) || [];
+
+        let currentPage = 1;
+        const itemsPerPage = 50;
+        let isLoading = false;
+        let gifObserver = null;
+
+        async function init() {
+            initTypeIcons();
+            initGenIcons();
+            initGifObserver();
+            try {
+                await fetchPokemon();
+                if (allPokemon.length > 0) {
+                    selectPokemon(allPokemon[0].id);
+                }
+            } catch (e) {
+                console.error("Failed to fetch pokemon:", e);
+            }
+            initInfiniteScroll();
+            initBGM();
+            initKeyboardNavigation();
+            updateTeamUI();
+        }
+
+        // Team Builder Functions
+        function updateTeamUI() {
+            const grid = document.getElementById('fullTeamGrid');
+            if (grid) grid.innerHTML = '';
+
+            for (let i = 0; i < 6; i++) {
+                const slot = document.getElementById(`slot-${i}`);
+                const p = pokemonTeam[i];
+                if (p) {
+                    const primaryType = p.type ? p.type.split('/')[0] : 'Normal';
+                    const color = getTypeColor(primaryType);
+                    
+                    slot.innerHTML = `
+                        <img src="${getPokeosAnimatedUrl(p.number)}" alt="${p.name}" onerror="this.onerror=null;this.src='${getPokeapiPngUrl(p.number)}'">
+                        <div class="remove-team-btn" onclick="event.stopPropagation(); removeFromTeam(${i})">
+                            <i class="fas fa-times"></i>
+                        </div>
+                    `;
+                    slot.classList.add('filled');
+                    slot.style.setProperty('--slot-color', color);
+                    slot.style.setProperty('--slot-rgba', color + '44');
+                    slot.title = p.name;
+
+                    if (grid) {
+                        const types = p.type ? p.type.split('/') : [];
+                        const typeHtml = types.map(t => `<span class="type-badge" style="background: ${getTypeColor(t)}">${t}</span>`).join('');
+                        grid.innerHTML += `
+                            <div class="full-team-card" id="teamCard-${i}" style="border-color: ${color}" onclick="showTeamMemberDesc(${i})">
+                                <img src="${getPokeosAnimatedUrl(p.number)}" alt="${p.name}" onerror="this.onerror=null;this.src='${getPokeapiPngUrl(p.number)}'">
+                                <div class="full-team-name">${p.name}</div>
+                                <div class="full-team-types">${typeHtml}</div>
+                                <div class="text-white/30 text-[10px] mt-2 font-bold">#${String(p.number).padStart(3, '0')}</div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    slot.innerHTML = '';
+                    slot.classList.remove('filled');
+                    slot.style.removeProperty('--slot-color');
+                    slot.style.removeProperty('--slot-rgba');
+                    slot.title = 'Empty Slot';
+
+                    if (grid) {
+                        grid.innerHTML += `
+                            <div class="full-team-card empty">
+                                <div class="text-white/10 text-5xl"><i class="fas fa-plus-circle"></i></div>
+                                <div class="text-white/20 uppercase font-black tracking-widest text-xs mt-4">Empty Slot</div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+            localStorage.setItem('pokemonTeam', JSON.stringify(pokemonTeam));
+        }
+
+        function showTeamMemberDesc(index) {
+            const p = pokemonTeam[index];
+            if (!p) return;
+
+            document.querySelectorAll('.full-team-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`teamCard-${index}`).classList.add('selected');
+
+            const panel = document.getElementById('fullTeamDescPanel');
+            const primaryType = p.type ? p.type.split('/')[0] : 'Normal';
+            const color = getTypeColor(primaryType);
+            
+            panel.classList.remove('active');
+            void panel.offsetWidth;
+            panel.classList.add('active');
+
+            const teamImg = document.getElementById('teamDescImg');
+            teamImg.onerror = () => { teamImg.onerror = null; teamImg.src = getPokeapiPngUrl(p.number); };
+            teamImg.src = getPokeosAnimatedUrl(p.number);
+            document.getElementById('teamDescNum').innerText = `#${String(p.number).padStart(3, '0')}`;
+            document.getElementById('teamDescName').innerText = p.name;
+            document.getElementById('teamDescText').innerText = p.description || "No description available.";
+            
+            const types = p.type ? p.type.split('/') : [];
+            document.getElementById('teamDescTypes').innerHTML = types.map(t => 
+                `<span class="type-badge-large" style="background: ${getTypeColor(t)}">${t}</span>`
+            ).join('');
+
+            const viewBtn = document.getElementById('teamDescViewBtn');
+            viewBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            viewBtn.onclick = () => {
+                selectPokemon(p.id, true);
+                toggleModal('fullTeamModal');
+            };
+
+            const removeBtn = document.getElementById('teamDescRemoveBtn');
+            removeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            removeBtn.classList.add('opacity-100');
+            removeBtn.onclick = () => {
+                removeFromTeam(index);
+                panel.classList.remove('active');
+            };
+
+            panel.style.borderColor = color;
+            document.getElementById('teamDescText').style.borderColor = color;
+        }
+
+        function openFullTeam() {
+            updateTeamUI();
+            toggleModal('fullTeamModal');
+            document.getElementById('fullTeamDescPanel').classList.remove('active');
+        }
+
+        function addToTeam() {
+            if (!selectedId) return;
+            if (pokemonTeam.length >= 6) {
+                alert("Team is full!");
+                return;
+            }
+            const p = allPokemon.find(pokemon => pokemon.id === selectedId);
+            if (p) {
+                pokemonTeam.push(p);
+                updateTeamUI();
+            }
+        }
+
+        function removeFromTeam(index) {
+            pokemonTeam.splice(index, 1);
+            updateTeamUI();
+        }
+
+        function selectFromTeam(index) {
+            const p = pokemonTeam[index];
+            if (p) selectPokemon(p.id);
+        }
+
+        function navigateToEvo(name) {
+            const p = allPokemon.find(pokemon => pokemon.name.toLowerCase() === name.toLowerCase());
+            if (p) {
+                toggleModal('statsModal');
+                selectPokemon(p.id, true);
+            }
+        }
+
+        function initGenIcons() {
+            const grid = document.getElementById('genIconGrid');
+            const gens = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const genImages = {
+                1: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
+                2: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/158.png',
+                3: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/252.png',
+                4: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/390.png',
+                5: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/495.png',
+                6: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/656.png',
+                7: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/722.png',
+                8: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/810.png',
+                9: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/906.png'
+            };
+
+            grid.innerHTML = gens.map(g => `
+                <div class="gen-btn" onclick="toggleGenFilter(${g})" id="genBtn-${g}" style="background-image: url('${genImages[g]}')" title="Gen ${g}">
+                    <span>${g}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleGenFilter(gen) {
+            if (selectedGen === gen) {
+                selectedGen = null;
+                document.getElementById(`genBtn-${gen}`).classList.remove('active');
+            } else {
+                document.querySelectorAll('.gen-btn').forEach(b => b.classList.remove('active'));
+                selectedGen = gen;
+                document.getElementById(`genBtn-${gen}`).classList.add('active');
+            }
+            filterList();
+        }
+
+        function clearFilters() {
+            selectedType = null;
+            selectedGen = null;
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.type-icon-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.gen-btn').forEach(b => b.classList.remove('active'));
+            const root = document.documentElement;
+            root.style.setProperty('--theme-color', '#ff4d2d');
+            root.style.setProperty('--theme-color-light', '#ff7a5c');
+            filterList();
+        }
+
+        function initKeyboardNavigation() {
+            document.addEventListener('keydown', (e) => {
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const currentIndex = visibleList.findIndex(p => p.id === selectedId);
+                    let nextIndex = e.key === 'ArrowDown' ? Math.min(currentIndex + 1, visibleList.length - 1) : Math.max(currentIndex - 1, 0);
+                    if (nextIndex !== currentIndex) {
+                        selectPokemon(visibleList[nextIndex].id);
+                        scrollToSelected();
+                    }
+                }
+            });
+        }
+
+        function scrollToSelected() {
+            setTimeout(() => {
+                const selectedEl = document.querySelector('.list-item.selected');
+                if (selectedEl) selectedEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 150);
+        }
+
+        function playPokemonCry(number) {
+            const audio = new Audio(`https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${number}.ogg`);
+            audio.volume = 0.3;
+            audio.play().catch(() => {});
+        }
+
+        function triggerAttack() {
+            const p = allPokemon.find(p => p.id === selectedId);
+            if (!p) return;
+            playPokemonCry(p.number);
+            const sprite = document.getElementById('mainSprite');
+            sprite.classList.remove('sprite-attack');
+            void sprite.offsetWidth;
+            sprite.classList.add('sprite-attack');
+        }
+
+        function initTypeIcons() {
+            const types = [
+                { name: 'Normal', icon: 'fa-circle' }, { name: 'Fire', icon: 'fa-fire' },
+                { name: 'Water', icon: 'fa-droplet' }, { name: 'Grass', icon: 'fa-leaf' },
+                { name: 'Electric', icon: 'fa-bolt' }, { name: 'Ice', icon: 'fa-snowflake' },
+                { name: 'Fighting', icon: 'fa-hand-fist' }, { name: 'Poison', icon: 'fa-skull-crossbones' },
+                { name: 'Ground', icon: 'fa-mountain' }, { name: 'Flying', icon: 'fa-feather' },
+                { name: 'Psychic', icon: 'fa-eye' }, { name: 'Bug', icon: 'fa-bug' },
+                { name: 'Rock', icon: 'fa-gem' }, { name: 'Ghost', icon: 'fa-ghost' },
+                { name: 'Dragon', icon: 'fa-dragon' }, { name: 'Steel', icon: 'fa-shield-halved' },
+                { name: 'Dark', icon: 'fa-moon' }, { name: 'Fairy', icon: 'fa-wand-sparkles' }
+            ];
+            const grid = document.getElementById('typeIconGrid');
+            grid.innerHTML = types.map(t => `
+                <div class="type-icon-btn" onclick="toggleTypeFilter('${t.name}')" id="typeBtn-${t.name}" style="background: ${getTypeColor(t.name)}" title="${t.name}">
+                    <i class="fas ${t.icon}"></i>
+                </div>
+            `).join('');
+        }
+
+        function toggleTypeFilter(type) {
+            const root = document.documentElement;
+            if (selectedType === type) {
+                selectedType = null;
+                document.getElementById(`typeBtn-${type}`).classList.remove('active');
+                root.style.setProperty('--theme-color', '#ff4d2d');
+                root.style.setProperty('--theme-color-light', '#ff7a5c');
+            } else {
+                document.querySelectorAll('.type-icon-btn').forEach(b => b.classList.remove('active'));
+                selectedType = type;
+                document.getElementById(`typeBtn-${type}`).classList.add('active');
+                const color = getTypeColor(type);
+                root.style.setProperty('--theme-color', color);
+                root.style.setProperty('--theme-color-light', adjustColor(color, 20));
+            }
+            filterList();
+        }
+
+        function adjustColor(hex, percent) {
+            const num = parseInt(hex.replace('#', ''), 16),
+                amt = Math.round(2.55 * percent),
+                R = (num >> 16) + amt, G = (num >> 8 & 0x00FF) + amt, B = (num & 0x0000FF) + amt;
+            return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+        }
+
+        function initBGM() {
+            const audio = document.getElementById('bgmAudio');
+            audio.volume = 0.2;
+            const isMuted = localStorage.getItem('bgmMuted') === 'true';
+            if (!isMuted) {
+                const play = () => { audio.play().catch(() => {}); document.removeEventListener('click', play); };
+                document.addEventListener('click', play);
+            }
+            updateBGMIcon(isMuted || audio.paused);
+        }
+
+        function toggleBGM() {
+            const audio = document.getElementById('bgmAudio');
+            if (audio.paused) {
+                audio.play().catch(() => {});
+                localStorage.setItem('bgmMuted', 'false');
+                updateBGMIcon(false);
+            } else {
+                audio.pause();
+                localStorage.setItem('bgmMuted', 'true');
+                updateBGMIcon(true);
+            }
+        }
+
+        function updateBGMIcon(isMuted) {
+            document.getElementById('bgmIcon').className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+        }
+
+        function toggleShiny() {
+            isShiny = !isShiny;
+            document.getElementById('shinyToggle').classList.toggle('active', isShiny);
+            if (selectedId) updateMainSprite(allPokemon.find(p => p.id === selectedId));
+        }
+
+        function toggleBack() {
+            isBack = !isBack;
+            document.getElementById('backToggle').classList.toggle('active', isBack);
+            if (selectedId) updateMainSprite(allPokemon.find(p => p.id === selectedId));
+        }
+
+        function getPokeosAnimatedUrl(number) {
+            return `https://s3.pokeos.com/pokeos-uploads/assets/pokemon/home/animated/${number}.gif`;
+        }
+
+        function getPokeapiPngUrl(number) {
+            return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${number}.png`;
+        }
+
+        function initGifObserver() {
+            if (gifObserver) return;
+            gifObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) return;
+                    const img = entry.target;
+                    const gifUrl = img.dataset.gif;
+                    if (!gifUrl) return;
+                    if (img.dataset.gifLoaded === 'true') return;
+                    img.dataset.gifLoaded = 'true';
+
+                    const pre = new Image();
+                    pre.onload = () => { img.src = gifUrl; };
+                    pre.src = gifUrl;
+
+                    gifObserver.unobserve(img);
+                });
+            }, { root: document.getElementById('pokemonList'), rootMargin: '200px 0px', threshold: 0.01 });
+        }
+
+        function observeGifsInList() {
+            if (!gifObserver) return;
+            document.querySelectorAll('#pokemonList img[data-gif]').forEach((img) => gifObserver.observe(img));
+        }
+
+        function updateMainSprite(p) {
+            const sprite = document.getElementById('mainSprite');
+            const spinner = document.getElementById('loadingSpinner');
+            spinner.style.display = 'block';
+            sprite.style.opacity = '0.3';
+            const pngUrl = getPokeapiPngUrl(p.number);
+
+            if (isBack) {
+                const backUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${isShiny ? 'shiny/' : ''}${p.number}.png`;
+                sprite.onerror = () => { sprite.onerror = null; sprite.src = pngUrl; spinner.style.display = 'none'; sprite.style.opacity = '1'; };
+                sprite.onload = () => { spinner.style.display = 'none'; sprite.style.opacity = '1'; };
+                sprite.src = backUrl;
+                return;
+            }
+
+            if (isShiny) {
+                const shinyUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${p.number}.png`;
+                sprite.onerror = () => { sprite.onerror = null; sprite.src = pngUrl; spinner.style.display = 'none'; sprite.style.opacity = '1'; };
+                sprite.onload = () => { spinner.style.display = 'none'; sprite.style.opacity = '1'; };
+                sprite.src = shinyUrl;
+                return;
+            }
+
+            sprite.onerror = () => { sprite.onerror = null; sprite.src = pngUrl; spinner.style.display = 'none'; sprite.style.opacity = '1'; };
+            sprite.onload = () => { spinner.style.display = 'none'; sprite.style.opacity = '1'; };
+            sprite.src = pngUrl;
+
+            const gifUrl = getPokeosAnimatedUrl(p.number);
+            const pre = new Image();
+            pre.onload = () => {
+                if (selectedId === p.id && !isBack && !isShiny) sprite.src = gifUrl;
+            };
+            pre.src = gifUrl;
+        }
+
+        function initInfiniteScroll() {
+            const list = document.getElementById('pokemonList');
+            list.addEventListener('scroll', () => {
+                if (!isLoading && list.scrollTop + list.clientHeight >= list.scrollHeight - 100) {
+                    if (currentPage * itemsPerPage < visibleList.length) {
+                        isLoading = true; currentPage++; renderList(visibleList); isLoading = false;
+                    }
+                }
+            });
+        }
+
+        async function fetchPokemon() {
+            try {
+                const res = await fetch(API_URL);
+                allPokemon = (await res.json()).sort((a, b) => a.number - b.number);
+                visibleList = [...allPokemon];
+                renderList(visibleList);
+            } catch (e) { console.error(e); }
+        }
+
+        function renderList(list) {
+            const el = document.getElementById('pokemonList');
+            el.innerHTML = list.slice(0, currentPage * itemsPerPage).map(p => `
+                <div class="list-item ${p.id === selectedId ? 'selected' : ''}" style="border-left-color: ${getTypeColor(p.type ? p.type.split('/')[0] : 'Normal')}" onclick="selectPokemon(${p.id})" ondblclick="showStats(${p.id})">
+                    <img src="${getPokeapiPngUrl(p.number)}" data-gif="${getPokeosAnimatedUrl(p.number)}" class="item-sprite" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${getPokeapiPngUrl(p.number)}'">
+                    <span class="item-number">No. ${String(p.number).padStart(3, '0')}</span>
+                    <span class="item-name">${p.name}</span>
+                    <div class="ml-auto flex gap-2" ${isAdmin ? '' : 'style="display:none"'}>
+                        <i class="fas fa-edit opacity-30 hover:opacity-100" onclick="event.stopPropagation(); openEditModal(${p.id})"></i>
+                        <i class="fas fa-trash-can opacity-30 hover:opacity-100" onclick="event.stopPropagation(); deletePokemon(${p.id})"></i>
+                    </div>
+                </div>
+            `).join('');
+            observeGifsInList();
+        }
+
+        function selectPokemon(id, openModal = false) {
+            const p = allPokemon.find(x => x.id === id);
+            if (!p) return;
+            selectedId = id;
+            if (!openModal) playPokemonCry(p.number);
+            updateMainSprite(p);
+            document.getElementById('featuredDesc').innerText = p.description || 'No data.';
+            document.getElementById('bottomNum').innerText = `#${String(p.number).padStart(3, '0')}`;
+            document.getElementById('bottomName').innerText = p.name;
+            document.getElementById('bottomTypes').innerHTML = (p.type ? p.type.split('/') : []).map(t => `<span class="type-badge-large" style="background: ${getTypeColor(t)}">${t}</span>`).join('');
+            renderList(visibleList);
+            if (openModal) showStats(id);
+        }
+
+        function showStats(id) {
+            const p = allPokemon.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('modalPokemonName').innerText = p.name;
+            document.getElementById('modalPokemonNum').innerText = `#${String(p.number).padStart(3, '0')}`;
+            const modalSprite = document.getElementById('modalSprite');
+            modalSprite.onerror = () => { modalSprite.onerror = null; modalSprite.src = getPokeapiPngUrl(p.number); };
+            modalSprite.src = getPokeosAnimatedUrl(p.number);
+            document.getElementById('modalDesc').innerText = p.description || 'No data.';
+            document.getElementById('infoCategory').innerText = p.category || 'Unknown';
+            document.getElementById('infoDimensions').innerText = `${p.height || '--'} / ${p.weight || '--'}`;
+            document.getElementById('infoAbilities').innerText = p.abilities || '--';
+            
+            const stats = [ ['Hp', p.hp], ['Atk', p.attack], ['Def', p.defense], ['SpAtk', p.specialAttack], ['SpDef', p.specialDefense], ['Spd', p.speed]];
+            stats.forEach(([s, v]) => {
+                document.getElementById(`bar${s}`).style.width = `${Math.min((v / 200) * 100, 100)}%`;
+                document.getElementById(`val${s}`).innerText = v || 0;
+            });
+            document.getElementById('valTotal').innerText = p.bst || stats.reduce((a, b) => a + (b[1] || 0), 0);
+            
+            const types = p.type ? p.type.split('/') : [];
+            document.getElementById('infoType').innerHTML = types.map(t => `<span class="type-badge" style="background: ${getTypeColor(t)}">${t}</span>`).join(' ');
+            
+            const updateBadges = (id, data) => {
+                const el = document.getElementById(id);
+                if (data && data !== 'None') el.innerHTML = data.split(',').map(t => `<span class="type-badge" style="background: ${getTypeColor(t.trim())}">${t.trim()}</span>`).join('');
+                else el.innerText = 'None';
+            };
+            updateBadges('infoWeakness', p.weakness);
+            updateBadges('infoStrength', p.strength);
+            
+            const evoEl = document.getElementById('infoEvolution');
+            if (p.evolution && p.evolution !== 'No evolution data') {
+                evoEl.innerHTML = p.evolution.split('->').map((n, i, a) => {
+                    const evoName = n.trim();
+                    const evoNameKey = normalizeNameForLookup(evoName);
+                    const evoPokemon = allPokemon.find(px => normalizeNameForLookup(px.name) === evoNameKey);
+                    const evoNumber = evoPokemon ? evoPokemon.number : null;
+                    const spriteUrl = `https://s3.pokeos.com/pokeos-uploads/assets/pokemon/home/animated/${evoNumber || 0}.gif`;
+                    const fallbackUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evoNumber || 0}.png`;
+                    const safeName = evoName.replace(/'/g, "\\'");
+                    return `
+                        <div class="flex items-center gap-2">
+                            <div class="evo-stage cursor-pointer" onclick="navigateToEvo('${safeName}')">
+                                <img src="${spriteUrl}" class="evo-sprite" onerror="this.onerror=null;this.src='${fallbackUrl}'">
+                                <span class="evo-name">${evoName}</span>
+                            </div>
+                            ${i < a.length - 1 ? '<i class="fas fa-chevron-right evo-arrow"></i>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            } else evoEl.innerText = 'No evolution data';
+
+            toggleModal('statsModal');
+        }
+
+        function normalizeNameForLookup(name) {
+            return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        function getTypeColor(t) {
+            const c = { 'Normal': '#A8A878', 'Fire': '#F08030', 'Water': '#6890F0', 'Grass': '#78C850', 'Electric': '#F8D030', 'Ice': '#98D8D8', 'Fighting': '#C03028', 'Poison': '#A040A0', 'Ground': '#E0C068', 'Flying': '#A890F0', 'Psychic': '#F85888', 'Bug': '#A8B820', 'Rock': '#B8A038', 'Ghost': '#705898', 'Dragon': '#7038F8', 'Steel': '#B8B8D0', 'Dark': '#705848', 'Fairy': '#EE99AC' };
+            return c[t.trim()] || '#777';
+        }
+
+        function filterList() {
+            const q = document.getElementById('searchInput').value.toLowerCase().trim();
+            visibleList = allPokemon.filter(p => {
+                const mQ = !q || p.name.toLowerCase().includes(q) || p.number.toString() === q;
+                const mT = !selectedType || (p.type && p.type.toLowerCase().split('/').includes(selectedType.toLowerCase()));
+                let mG = true;
+                if (selectedGen) {
+                    const r = { 1: [1, 151], 2: [152, 251], 3: [252, 386], 4: [387, 493], 5: [494, 649], 6: [650, 721], 7: [722, 809], 8: [810, 905], 9: [906, 1025] };
+                    mG = p.number >= r[selectedGen][0] && p.number <= r[selectedGen][1];
+                }
+                return mQ && mT && mG;
+            });
+            currentPage = 1; renderList(visibleList);
+        }
+
+        async function deletePokemon(id) {
+            if (!confirm('Release?')) return;
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            allPokemon = allPokemon.filter(p => p.id !== id);
+            filterList();
+        }
+
+        function openAddModal() {
+            document.getElementById('pokemonForm').reset();
+            document.getElementById('pokemonId').value = '';
+            document.getElementById('modalTitle').innerText = 'New Registry';
+            updateFormPreview();
+            toggleModal('formModal');
+        }
+
+        function updateFormPreview() {
+            const num = document.getElementById('formNumber').value || 0;
+            const previewImg = document.getElementById('formPreviewSprite');
+            const previewNum = document.getElementById('formPreviewNumber');
+            
+            previewNum.innerText = `#${String(num).padStart(3, '0')}`;
+            if (num > 0) {
+                previewImg.onerror = () => { previewImg.onerror = null; previewImg.src = getPokeapiPngUrl(num); };
+                previewImg.src = getPokeosAnimatedUrl(num);
+                previewImg.classList.remove('opacity-20');
+            } else {
+                previewImg.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
+                previewImg.classList.add('opacity-20');
+            }
+        }
+
+        function openEditModal(id) {
+            const p = allPokemon.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('pokemonId').value = p.id;
+            document.getElementById('formNumber').value = p.number;
+            document.getElementById('formName').value = p.name;
+            ['Category', 'Height', 'Weight', 'Type', 'Level', 'Abilities', 'Hp', 'Attack', 'Defense', 'SpecialAttack', 'SpecialDefense', 'Speed', 'Weakness', 'Strength', 'Description'].forEach(f => {
+                const el = document.getElementById(`form${f}`);
+                if (el) el.value = p[f.charAt(0).toLowerCase() + f.slice(1)] || '';
+            });
+            document.getElementById('modalTitle').innerText = 'Update Info';
+            updateFormPreview();
+            toggleModal('formModal');
+        }
+
+        document.getElementById('pokemonForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('pokemonId').value;
+            const fd = new FormData(e.target);
+            const data = Object.fromEntries(fd.entries());
+            ['number', 'level', 'hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'].forEach(k => data[k] = parseInt(data[k]));
+            data.imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.number}.png`;
+            const res = await fetch(id ? `${API_URL}/${id}` : API_URL, {
+                method: id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) { await fetchPokemon(); toggleModal('formModal'); }
+        });
+
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+
+        init();
+    </script>
+</body>
+</html>

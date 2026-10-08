@@ -1,0 +1,1 @@
+$env:DB_USERNAME='root'; $env:DB_PASSWORD='Oct82005'; ./mvnw spring-boot:run
